@@ -1,25 +1,27 @@
 <!-- components/PdfPreview.vue -->
 <template>
   <div class="pdf-preview">
-    <div class="pdf-section">
-      <div class="pdf-title-container">
-        <h3 
-          v-if="!isEditing" 
-          class="pdf-title" 
-          @click="startEditing"
-        >
-          {{ displayName }} ({{ pdfPages.length }} pages)
-        </h3>
-        <input
-          v-else
-          ref="titleInput"
-          v-model="editedName"
-          class="pdf-title-input"
-          @blur="saveNewName"
-          @keyup.enter="saveNewName"
-          @keyup.esc="cancelEditing"
-        />
-      </div>
+    <details class="pdf-section" open>
+      <summary class="pdf-summary">
+        <div class="pdf-title-container">
+          <h3 
+            v-if="!isEditing" 
+            class="pdf-title" 
+            @click.prevent="startEditing"
+          >
+            {{ displayName }} ({{ pdfPages.length }} pages)
+          </h3>
+          <input
+            v-else
+            ref="titleInput"
+            v-model="editedName"
+            class="pdf-title-input"
+            @blur="saveNewName"
+            @keyup.enter="saveNewName"
+            @keyup.esc="cancelEditing"
+          />
+        </div>
+      </summary>
       <div class="pages-container">
         <PdfPage
           v-for="page in pdfPages"
@@ -38,7 +40,7 @@
           <div v-if="isEndZoneTarget" class="drop-line"></div>
         </div>
       </div>
-    </div>
+    </details>
   </div>
 </template>
 
@@ -64,7 +66,8 @@ export default {
       isEndZoneTarget: false,
       isDraggingActive: false,
       isEditing: false,
-      editedName: ''
+      editedName: '',
+      scrollInterval: null
     }
   },
 
@@ -149,27 +152,59 @@ export default {
     cancelEditing() {
       this.isEditing = false
       this.editedName = ''
-    }
+    },
+
+    startAutoScroll(e) {
+      if (this.scrollInterval) return;
+      
+      const threshold = 150; // pixels from viewport edge
+      const scrollSpeed = 10;
+      
+      this.scrollInterval = setInterval(() => {
+        const viewportHeight = window.innerHeight;
+        const mouseY = e.clientY;
+        
+        if (mouseY < threshold) {
+          // Scroll up
+          window.scrollBy(0, -scrollSpeed);
+        } else if (mouseY > viewportHeight - threshold) {
+          // Scroll down
+          window.scrollBy(0, scrollSpeed);
+        }
+      }, 16); // ~60fps
+    },
+
+    stopAutoScroll() {
+      if (this.scrollInterval) {
+        clearInterval(this.scrollInterval);
+        this.scrollInterval = null;
+      }
+    },
   },
 
   mounted() {
     document.addEventListener('dragstart', () => {
-      this.isDraggingActive = true
-    })
+      this.isDraggingActive = true;
+    });
     document.addEventListener('dragend', () => {
-      this.isDraggingActive = false
-      this.isEndZoneTarget = false
-    })
+      this.isDraggingActive = false;
+      this.isEndZoneTarget = false;
+      this.stopAutoScroll();
+    });
+    document.addEventListener('dragover', this.startAutoScroll);
   },
 
   beforeDestroy() {
     document.removeEventListener('dragstart', () => {
-      this.isDraggingActive = true
-    })
+      this.isDraggingActive = true;
+    });
     document.removeEventListener('dragend', () => {
-      this.isDraggingActive = false
-      this.isEndZoneTarget = false
-    })
+      this.isDraggingActive = false;
+      this.isEndZoneTarget = false;
+      this.stopAutoScroll();
+    });
+    document.removeEventListener('dragover', this.startAutoScroll);
+    this.stopAutoScroll();
   }
 }
 </script>
@@ -180,7 +215,7 @@ export default {
 }
 
 .pdf-title-container {
-  margin: 0 0 12px 10px;
+  margin: 0;
 }
 
 .pdf-title {
@@ -240,5 +275,39 @@ export default {
   height: 100%;
   background-color: #2196f3;
   pointer-events: none;
+}
+
+.pdf-section {
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.pdf-summary {
+  padding: 12px;
+  cursor: pointer;
+  background: #f5f5f5;
+  user-select: none;
+}
+
+.pdf-summary:hover {
+  background: #eeeeee;
+}
+
+details:not([open]) .pdf-summary::before {
+  transform: rotate(-90deg);
+}
+
+.pdf-title-container {
+  display: inline-block;
+  margin: 0;
+}
+
+.pdf-title {
+  display: inline-block;
+  margin: 0;
+  color: #333;
+  font-size: 1.1em;
+  cursor: pointer;
 }
 </style>
