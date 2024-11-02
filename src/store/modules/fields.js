@@ -1,4 +1,3 @@
-
 export default {
   namespaced: true,
   
@@ -15,15 +14,19 @@ export default {
         state.fields[pdfName][pageNum] = []
       }
       
-      state.fields[pdfName][pageNum].push({
+      const newField = {
         id: `field_${Date.now()}`,
         type: field.type,
-        x: field.x,
-        y: field.y,
-        width: field.width || 150,
-        height: field.height || 40,
+        x: Math.max(0, field.x || 0),
+        y: Math.max(0, field.y || 0),
+        width: field.width || (field.type === 'date' ? 100 : 200),
+        height: field.type === 'signature' ? 50 : 20,
         value: null
-      })
+      }
+      
+      console.log('Adding field with coordinates:', newField)
+      
+      state.fields[pdfName][pageNum].push(newField)
     },
 
     UPDATE_FIELD_POSITION(state, { pdfName, pageNum, fieldId, x, y }) {

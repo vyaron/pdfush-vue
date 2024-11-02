@@ -218,7 +218,6 @@ export default {
           commit('ui/SET_LOADING', true, { root: true })
           
           const mergedPdf = await PDFDocument.create()
-          // Get the default font
           const helveticaFont = await mergedPdf.embedFont(StandardFonts.Helvetica)
           
           for (const pageInfo of state.pageOrder) {
@@ -226,64 +225,67 @@ export default {
             const arrayBuffer = await pdfFile.arrayBuffer()
             const sourcePdf = await PDFDocument.load(arrayBuffer)
             
-            // Copy the page
             const [copiedPage] = await mergedPdf.copyPages(sourcePdf, [pageInfo.originalPageNum - 1])
             
-            // Apply rotation if any
             if (typeof pageInfo.rotation === 'number' && pageInfo.rotation !== 0) {
               const normalizedRotation = ((pageInfo.rotation % 360) + 360) % 360
               copiedPage.setRotation(degrees(normalizedRotation))
             }
             
-            // Add the page to merged PDF
             mergedPdf.addPage(copiedPage)
             
             // Get fields for this page
             const pageFields = rootState.fields.fields[pageInfo.pdfName]?.[pageInfo.pageNum] || []
+            console.log('Processing fields for page:', pageInfo.pageNum, pageFields)
             
-            // Draw fields on the page
+            const form = mergedPdf.getForm()
+            const { width, height } = copiedPage.getSize()
+            
             for (const field of pageFields) {
-              const { type, x, y, width, height, value } = field
+              const fieldName = `${field.type}_${field.id}_${Date.now()}`
               
-              switch (type) {
-                case 'text':
-                case 'name':
-                  copiedPage.drawText(value || `[${type}]`, {
-                    x: x,
-                    y: copiedPage.getHeight() - y - height, // Flip Y coordinate
-                    size: 12,
-                    font: helveticaFont,
-                    color: rgb(0, 0, 0)
-                  })
-                  break
-                  
-                case 'date':
-                  const dateValue = value || new Date().toLocaleDateString()
-                  copiedPage.drawText(dateValue, {
-                    x: x,
-                    y: copiedPage.getHeight() - y - height,
-                    size: 12,
-                    font: helveticaFont,
-                    color: rgb(0, 0, 0)
-                  })
-                  break
-                  
-                case 'signature':
-                  // If there's a signature value (e.g., an image), draw it
-                  // For now, just draw a placeholder
-                  copiedPage.drawText('[Signature]', {
-                    x: x,
-                    y: copiedPage.getHeight() - y - height,
-                    size: 12,
-                    font: helveticaFont,
-                    color: rgb(0, 0, 0)
-                  })
-                  break
+              try {
+                const textField = form.createTextField(fieldName)
+                textField.setText('')
+                
+                // Calculate proper Y position (PDF coordinates start from bottom-left)
+                const fieldHeight = field.type === 'signature' ? 50 : 20
+                const yPosition = copiedPage.getHeight() - field.y - fieldHeight
+                
+                // Use the original width from the field
+                const fieldWidth = field.width || (field.type === 'date' ? 100 : 200)
+                
+                textField.addToPage(copiedPage, {
+                  x: field.x,
+                  y: yPosition,
+                  width: fieldWidth,
+                  height: fieldHeight,
+                  borderWidth: 1,
+                  borderColor: rgb(0, 0, 0),
+                })
+                
+                console.log(`Created field: ${fieldName}`, {
+                  x: field.x,
+                  y: yPosition,
+                  originalY: field.y,
+                  pageHeight: copiedPage.getHeight()
+                })
+              } catch (fieldError) {
+                console.error('Error creating field:', fieldError, fieldName)
               }
             }
           }
           
-          const mergedPdfBytes = await mergedPdf.save()
+          // Update field appearances
+          const form = mergedPdf.getForm()
+          form.updateFieldAppearances(helveticaFont)
+          
+          const mergedPdfBytes = await mergedPdf.save({
+            addDefaultPage: false,
+            useObjectStreams: false,
+            updateFieldAppearances: true
+          })
+          
           const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' })
           const url = URL.createObjectURL(blob)
           
