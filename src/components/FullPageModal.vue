@@ -2,17 +2,23 @@
 <template>
   <BaseModal @close="closeModal">
     <div class="toolbar">
-      <div class="fields-section">
-        <span class="fields-title">Add Fields:</span>
-        <div class="field-buttons">
-          <FieldButton 
-            v-for="field in fields" 
-            :key="field.type"
-            :type="field.type"
-            :label="field.label"
-            @click="addField(field.type)"
-          />
+      <div class="toolbar-header">
+        <div class="fields-section">
+          <span class="fields-title">Add Fields:</span>
+          <div class="field-buttons">
+            <FieldButton 
+              v-for="field in fields" 
+              :key="field.type"
+              :type="field.type"
+              :label="field.label"
+              @click="addField(field.type)"
+            />
+          </div>
         </div>
+
+        <button class="close-button" @click="closeModal">
+          <i class="fas fa-times"></i>
+        </button>
       </div>
 
       <div class="nav-buttons">
@@ -21,11 +27,11 @@
           :disabled="!canGoBack" 
           @click="previousPage"
         >
-          ← Previous
+          ← Previous 
         </button>
         
         <span class="page-info">
-          Page {{ activePageNum }} of {{ totalPages }}
+          Page {{ activePageNum }} of {{ totalPages }} 
         </span>
         
         <button 
@@ -39,8 +45,19 @@
     </div>
 
     <div class="page-container">
-      <div class="canvas-wrapper">
+      <div class="canvas-wrapper" ref="canvasContainer">
         <canvas ref="canvas"></canvas>
+        
+        <!-- Add fields layer -->
+        <div class="fields-layer">
+          <DraggableField
+            v-for="field in pageFields"
+            :key="field.id"
+            :field="field"
+            :pdf-name="activePdf"
+            :page-num="activePageNum"
+          />
+        </div>
       </div>
     </div>
   </BaseModal>
@@ -51,13 +68,15 @@ import { mapState, mapActions, mapMutations } from 'vuex'
 import { getDocument } from 'pdfjs-dist'
 import BaseModal from './BaseModal.vue'
 import FieldButton from './FieldButton.vue'
+import DraggableField from './DraggableField.vue'
 
 export default {
   name: 'FullPageModal',
   
   components: {
     BaseModal,
-    FieldButton
+    FieldButton,
+    DraggableField
   },
 
   data() {
@@ -99,6 +118,13 @@ export default {
 
     canGoForward() {
       return this.currentPageIndex < this.totalPages - 1
+    },
+
+    pageFields() {
+      return this.$store.getters['fields/getPageFields'](
+        this.activePdf, 
+        this.activePageNum
+      )
     }
   },
 
@@ -188,9 +214,18 @@ export default {
     },
 
     addField(fieldType) {
-      this.$emit('add-field', {
-        type: fieldType,
-        page: this.activePageNum
+      // Get canvas container dimensions for initial positioning
+      const container = this.$refs.canvasContainer
+      const rect = container.getBoundingClientRect()
+      
+      this.$store.commit('fields/ADD_FIELD', {
+        pdfName: this.activePdf,
+        pageNum: this.activePageNum,
+        field: {
+          type: fieldType,
+          x: rect.width / 2 - 75, // Center the field
+          y: rect.height / 2 - 20
+        }
       })
     }
   }
@@ -261,11 +296,49 @@ export default {
 }
 
 .canvas-wrapper {
-  background: white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.fields-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none; /* Allow clicking through to canvas */
+}
+
+.fields-layer > * {
+  pointer-events: auto; /* Re-enable pointer events for fields */
 }
 
 .page-preview {
   display: block;
+}
+
+.toolbar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-button:hover {
+  background: #eee;
+  color: #333;
 }
 </style>
