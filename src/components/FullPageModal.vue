@@ -1,7 +1,7 @@
 <!-- components/FullPageModal.vue -->
 <template>
   <BaseModal @close="closeModal">
-    <div class="toolbar">
+    <div class="toolbar" @click.stop>
       <div class="toolbar-header">
         <div class="fields-section">
           <span class="fields-title">Add Fields:</span>
@@ -11,12 +11,12 @@
               :key="field.type"
               :type="field.type"
               :label="field.label"
-              @click="addField(field.type)"
+              @field-click="addField"
             />
           </div>
         </div>
 
-        <button class="close-button" @click="closeModal">
+        <button class="close-button" @click.stop="closeModal">
           <i class="fas fa-times"></i>
         </button>
       </div>
@@ -214,6 +214,8 @@ export default {
     },
 
     addField(fieldType) {
+      console.log('Adding field:', fieldType)
+      
       // Get canvas container dimensions for initial positioning
       const container = this.$refs.canvasContainer
       const rect = container.getBoundingClientRect()
@@ -223,10 +225,14 @@ export default {
         pageNum: this.activePageNum,
         field: {
           type: fieldType,
-          x: rect.width / 2 - 75, // Center the field
+          x: rect.width / 2 - 75,
           y: rect.height / 2 - 20
         }
       })
+    },
+
+    closeModal() {
+      this.$store.dispatch('ui/closeModal')
     }
   }
 }

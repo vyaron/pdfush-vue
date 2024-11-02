@@ -1,4 +1,4 @@
-import { PDFDocument } from 'pdf-lib'
+import { PDFDocument, degrees, rgb, StandardFonts } from 'pdf-lib'
 
 export default {
     namespaced: true,
@@ -213,8 +213,95 @@ export default {
           throw error
         }
       },
-      async combinePdfs({ state }) {
-        // PDF combining logic
+      async combinePdfs({ state, commit, rootState }) {
+        try {
+          commit('ui/SET_LOADING', true, { root: true })
+          
+          const mergedPdf = await PDFDocument.create()
+          // Get the default font
+          const helveticaFont = await mergedPdf.embedFont(StandardFonts.Helvetica)
+          
+          for (const pageInfo of state.pageOrder) {
+            const pdfFile = state.pdfDataStore[pageInfo.originalPdfName]
+            const arrayBuffer = await pdfFile.arrayBuffer()
+            const sourcePdf = await PDFDocument.load(arrayBuffer)
+            
+            // Copy the page
+            const [copiedPage] = await mergedPdf.copyPages(sourcePdf, [pageInfo.originalPageNum - 1])
+            
+            // Apply rotation if any
+            if (typeof pageInfo.rotation === 'number' && pageInfo.rotation !== 0) {
+              const normalizedRotation = ((pageInfo.rotation % 360) + 360) % 360
+              copiedPage.setRotation(degrees(normalizedRotation))
+            }
+            
+            // Add the page to merged PDF
+            mergedPdf.addPage(copiedPage)
+            
+            // Get fields for this page
+            const pageFields = rootState.fields.fields[pageInfo.pdfName]?.[pageInfo.pageNum] || []
+            
+            // Draw fields on the page
+            for (const field of pageFields) {
+              const { type, x, y, width, height, value } = field
+              
+              switch (type) {
+                case 'text':
+                case 'name':
+                  copiedPage.drawText(value || `[${type}]`, {
+                    x: x,
+                    y: copiedPage.getHeight() - y - height, // Flip Y coordinate
+                    size: 12,
+                    font: helveticaFont,
+                    color: rgb(0, 0, 0)
+                  })
+                  break
+                  
+                case 'date':
+                  const dateValue = value || new Date().toLocaleDateString()
+                  copiedPage.drawText(dateValue, {
+                    x: x,
+                    y: copiedPage.getHeight() - y - height,
+                    size: 12,
+                    font: helveticaFont,
+                    color: rgb(0, 0, 0)
+                  })
+                  break
+                  
+                case 'signature':
+                  // If there's a signature value (e.g., an image), draw it
+                  // For now, just draw a placeholder
+                  copiedPage.drawText('[Signature]', {
+                    x: x,
+                    y: copiedPage.getHeight() - y - height,
+                    size: 12,
+                    font: helveticaFont,
+                    color: rgb(0, 0, 0)
+                  })
+                  break
+              }
+            }
+          }
+          
+          const mergedPdfBytes = await mergedPdf.save()
+          const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' })
+          const url = URL.createObjectURL(blob)
+          
+          const link = document.createElement('a')
+          link.href = url
+          link.download = 'combined_document.pdf'
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          
+          URL.revokeObjectURL(url)
+          commit('ui/SET_LOADING', false, { root: true })
+          
+        } catch (error) {
+          console.error('Error combining PDFs:', error)
+          commit('ui/SET_LOADING', false, { root: true })
+          throw error
+        }
       },
       async deletePage({ commit }, { pdfName, pageNum }) {
         commit('DELETE_PAGE', { pdfName, pageNum })

@@ -4,7 +4,6 @@
     class="base-button"
     :class="{ disabled }"
     v-bind="$attrs"
-    @click="$emit('click')"
   >
     <slot></slot>
   </button>

@@ -11,11 +11,17 @@
   <DragDropArea />
   <BaseButton 
     id="combineButton" 
-    :disabled="!hasPdfs"
-    @click="combinePdfs"
+    :disabled="!hasPdfs || isLoading"
+    @click="handleCombine"
   >
-    Combine PDFs
+    {{ isLoading ? 'Combining...' : 'Combine PDFs' }}
   </BaseButton>
+
+  <div v-if="isLoading" class="loading-overlay">
+    <div class="loading-spinner"></div>
+    <div>Combining PDFs...</div>
+  </div>
+
   <div id="preview-container">
     <div class="pdf-previews">
       <PdfPreview
@@ -28,7 +34,6 @@
 
   <FullPageModal 
     v-if="showFullPageModal"
-    @add-field="handleAddField"
   />
   <footer>
     Multiple PDF Page-by-Page Preview with Drag and Drop
@@ -52,16 +57,21 @@ export default {
   },
   computed: {
     ...mapState('pdf', ['pdfDataStore']),
-    ...mapState('ui', ['modalVisible', 'showFullPageModal']),
+    ...mapState('ui', ['modalVisible', 'showFullPageModal', 'isLoading']),
     hasPdfs() {
       return Object.keys(this.pdfDataStore).length > 0
     }
   },
   methods: {
     ...mapActions('pdf', ['combinePdfs']),
-    handleAddField(fieldData) {
-      // Handle field addition here
-      console.log('Adding field:', fieldData)
+   
+    async handleCombine() {
+      try {
+        this.combinePdfs()
+      } catch (error) {
+        // You might want to show an error message to the user
+        console.error('Failed to combine PDFs:', error)
+      }
     }
   }
 }
@@ -91,5 +101,45 @@ export default {
     transform: translateY(0);
     opacity: 1;
   }
+}
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+#combineButton {
+  margin: 20px auto;
+  display: block;
+  min-width: 150px;
+}
+
+#combineButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 </style>
