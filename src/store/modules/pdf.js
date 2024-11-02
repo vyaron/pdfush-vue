@@ -4,7 +4,8 @@ export default {
     namespaced: true,
     state: {
       pdfDataStore: {},
-      pageOrder: []
+      pageOrder: [],
+      previewPage: null
     },
     getters: {
       hasPdfs: state => Object.keys(state.pdfDataStore).length > 0
@@ -37,11 +38,24 @@ export default {
         state.pageOrder = [...newOrder]
       },
       REMOVE_PAGE(state, { pdfName, pageNum }) {
-        state.pageOrder = state.pageOrder.filter(page => 
-          !(page.pdfName === pdfName && page.pageNum === pageNum)
+        const pages = [...state.pageOrder]
+        const pageIndex = pages.findIndex(
+          p => p.pdfName === pdfName && p.pageNum === pageNum
         )
+        
+        if (pageIndex !== -1) {
+          pages.splice(pageIndex, 1)
+          
+          // Update page numbers for the PDF
+          const pdfPages = pages.filter(p => p.pdfName === pdfName)
+          pdfPages.forEach((page, index) => {
+            page.pageNum = index + 1
+          })
+          
+          state.pageOrder = pages
+        }
       },
-      UPDATE_PAGE_ROTATION(state, { pdfName, pageNum, rotation }) {
+      ROTATE_PAGE(state, { pdfName, pageNum, rotation }) {
         const pageIndex = state.pageOrder.findIndex(page => 
           page.pdfName === pdfName && page.pageNum === pageNum
         )
@@ -120,6 +134,9 @@ export default {
       SET_PAGE_ORDER(state, newOrder) {
         console.log('Setting new page order:', newOrder)
         state.pageOrder = [...newOrder]
+      },
+      SET_PREVIEW_PAGE(state, pageInfo) {
+        state.previewPage = pageInfo
       }
     },
     actions: {

@@ -26,7 +26,10 @@
     </div>
   </div>
 
-  <FullPageModal v-if="modalVisible" />
+  <FullPageModal 
+    v-if="showFullPageModal"
+    @add-field="handleAddField"
+  />
   <footer>
     Multiple PDF Page-by-Page Preview with Drag and Drop
   </footer>
@@ -49,13 +52,17 @@ export default {
   },
   computed: {
     ...mapState('pdf', ['pdfDataStore']),
-    ...mapState('ui', ['modalVisible']),
+    ...mapState('ui', ['modalVisible', 'showFullPageModal']),
     hasPdfs() {
       return Object.keys(this.pdfDataStore).length > 0
     }
   },
   methods: {
-    ...mapActions('pdf', ['combinePdfs'])
+    ...mapActions('pdf', ['combinePdfs']),
+    handleAddField(fieldData) {
+      // Handle field addition here
+      console.log('Adding field:', fieldData)
+    }
   }
 }
 </script>

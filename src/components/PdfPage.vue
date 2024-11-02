@@ -11,8 +11,23 @@
     @drop="onDrop"
     :class="{ 'dragging': isDragging }"
   >
-    <div class="canvas-wrapper">
+    <div class="canvas-wrapper" :style="{ transform: `rotate(${pageInfo.rotation || 0}deg)` }">
       <canvas ref="canvas" class="page-preview"></canvas>
+      
+      <!-- Hover controls -->
+      <div class="hover-controls">
+        <div class="button-group">
+          <button class="control-btn" @click="rotatePage" title="Rotate">
+            <i class="fas fa-rotate-right"></i>
+          </button>
+          <button class="control-btn" @click="viewPage" title="Preview">
+            <i class="fas fa-expand"></i>
+          </button>
+          <button class="control-btn delete" @click="removePage" title="Delete">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
     </div>
     <div 
       v-if="isDropTarget && !isDragging" 
@@ -124,6 +139,32 @@ export default {
       } catch (error) {
         console.error('Drop error:', error)
       }
+    },
+
+    rotatePage() {
+      this.isRendered = false // Force re-render
+      const newRotation = ((this.pageInfo.rotation || 0) + 90) % 360
+      this.$store.commit('pdf/ROTATE_PAGE', {
+        pdfName: this.pageInfo.pdfName,
+        pageNum: this.pageInfo.pageNum,
+        rotation: newRotation
+      })
+      this.$nextTick(() => {
+        this.renderPage()
+      })
+    },
+
+    viewPage() {
+      this.$store.dispatch('ui/openModal', this.pageInfo)
+    },
+
+    removePage() {
+      if (confirm('Are you sure you want to remove this page?')) {
+        this.$store.commit('pdf/REMOVE_PAGE', {
+          pdfName: this.pageInfo.pdfName,
+          pageNum: this.pageInfo.pageNum
+        })
+      }
     }
   },
 
@@ -142,6 +183,7 @@ export default {
 }
 
 .canvas-wrapper {
+  position: relative;
   background: white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   border: 1px solid #ddd;
@@ -152,6 +194,61 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: transform 0.3s ease;
+}
+
+.canvas-wrapper:hover .hover-controls {
+  opacity: 1;
+}
+
+.hover-controls {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 8px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.5), transparent);
+  display: flex;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 1;
+}
+
+.button-group {
+  display: flex;
+  gap: 6px;
+}
+
+.control-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: none;
+  background: rgba(255, 255, 255, 0.9);
+  color: #444;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(2px);
+}
+
+.control-btn:hover {
+  background: white;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.control-btn.delete {
+  color: #dc3545;
+}
+
+.control-btn.delete:hover {
+  background: #dc3545;
+  color: white;
 }
 
 .page-preview {
