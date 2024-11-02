@@ -1,0 +1,55 @@
+ Volume in drive C is OS
+ Volume Serial Number is 0E01-2B5A
+
+ Directory of C:\dev\projects\pdfush-vue\src
+
+10/30/2024  07:57 PM    <DIR>          .
+10/30/2024  07:57 PM    <DIR>          ..
+10/30/2024  07:46 PM             9,431 App.vue
+10/30/2024  06:14 PM    <DIR>          assets
+10/30/2024  06:13 PM    <DIR>          components
+10/30/2024  06:10 PM               111 main.js
+10/30/2024  06:10 PM             1,276 style.css
+10/30/2024  07:46 PM    <DIR>          utils
+10/30/2024  07:57 PM                 0 X.TXT
+               4 File(s)         10,818 bytes
+
+ Directory of C:\dev\projects\pdfush-vue\src\assets
+
+10/30/2024  06:14 PM    <DIR>          .
+10/30/2024  06:14 PM    <DIR>          ..
+10/27/2024  08:49 AM            29,091 pdf.png
+10/30/2024  06:10 PM               496 vue.svg
+               2 File(s)         29,587 bytes
+
+ Directory of C:\dev\projects\pdfush-vue\src\components
+
+10/30/2024  06:13 PM    <DIR>          .
+10/30/2024  06:13 PM    <DIR>          ..
+10/30/2024  06:05 PM             2,381 BaseButton.vue
+10/30/2024  06:04 PM             1,245 BaseModal.vue
+10/30/2024  06:13 PM    <DIR>          common
+10/30/2024  06:02 PM             2,706 DragDropArea.vue
+10/30/2024  06:03 PM             1,011 FieldButton.vue
+10/30/2024  06:03 PM             3,719 FullPageModal.vue
+10/30/2024  07:34 PM             4,616 PdfPage.vue
+10/30/2024  06:02 PM             4,160 PdfPreview.vue
+               7 File(s)         19,838 bytes
+
+ Directory of C:\dev\projects\pdfush-vue\src\components\common
+
+10/30/2024  06:13 PM    <DIR>          .
+10/30/2024  06:13 PM    <DIR>          ..
+10/30/2024  06:05 PM             2,381 BaseButton.vue
+10/30/2024  06:04 PM             1,245 BaseModal.vue
+               2 File(s)          3,626 bytes
+
+ Directory of C:\dev\projects\pdfush-vue\src\utils
+
+10/30/2024  07:46 PM    <DIR>          .
+10/30/2024  07:46 PM    <DIR>          ..
+               0 File(s)              0 bytes
+
+     Total Files Listed:
+              15 File(s)         63,869 bytes
+              14 Dir(s)   3,474,706,432 bytes free
