@@ -9,7 +9,10 @@
     @drop.prevent="handleDrop"
     @click="triggerFileInput"
   >
-    <p>Drag and drop PDF or Image files here, or click to select files</p>
+    <div class="drop-content">
+      <i class="upload-icon">📄</i>
+      <p>Drag and drop PDF or Image files here, or click to select files</p>
+    </div>
     <input 
       ref="fileInput"
       type="file" 
@@ -61,3 +64,42 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+#drop-area {
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  padding: 40px;
+  text-align: center;
+  background: #f8f9fa;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#drop-area.highlight {
+  border-color: #2196f3;
+  background: #e3f2fd;
+}
+
+.drop-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.upload-icon {
+  font-size: 48px;
+  color: #666;
+}
+
+p {
+  margin: 0;
+  color: #666;
+  font-size: 1.1em;
+}
+</style>
