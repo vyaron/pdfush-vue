@@ -24,14 +24,16 @@ export default {
         state.pageOrder.push(...pagesWithOriginal)
         console.log('Updated pageOrder:', state.pageOrder)
       },
-      UPDATE_PDF_NAME(state, { oldName, newName }) {
+      UPDATE_DOC_NAME(state, { oldName, newName }) {
+        // Update PDF data store
         state.pdfDataStore[newName] = state.pdfDataStore[oldName]
         delete state.pdfDataStore[oldName]
         
         // Update page order references
         state.pageOrder = state.pageOrder.map(page => ({
           ...page,
-          pdfName: page.pdfName === oldName ? newName : page.pdfName
+          pdfName: page.pdfName === oldName ? newName : page.pdfName,
+          originalPdfName: page.originalPdfName === oldName ? newName : page.originalPdfName
         }))
       },
       UPDATE_PAGE_ORDER(state, newOrder) {

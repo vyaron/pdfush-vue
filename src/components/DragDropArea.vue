@@ -25,6 +25,7 @@
 </template>
 
 <script>
+import { PDFDocument } from 'pdf-lib'
 import { mapActions } from 'vuex'
 
 export default {
@@ -56,10 +57,82 @@ export default {
     },
     async processFiles(files) {
       for (const file of files) {
-        if (file.type === 'application/pdf' || file.type.startsWith('image/')) {
+        if (file.type === 'application/pdf') {
           await this.addPdf(file)
+        } else if (file.type.startsWith('image/')) {
+          const pdfFile = await this.convertImageToPdf(file)
+          await this.addPdf(pdfFile)
         }
       }
+    },
+    async convertImageToPdf(file) {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+
+      const imageData = await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result)
+        reader.onerror = reject
+      })
+
+      // Create a PDF from the image
+      const pdfDoc = await PDFDocument.create()
+      
+      // Load the image based on its type
+      let image
+      if (file.type === 'image/jpeg') {
+        image = await pdfDoc.embedJpg(imageData)
+      } else if (file.type === 'image/png') {
+        image = await pdfDoc.embedPng(imageData)
+      } else {
+        const pngData = await this.convertImageToPng(imageData)
+        image = await pdfDoc.embedPng(pngData)
+      }
+
+      // Use standard A4 page size
+      const page = pdfDoc.addPage([595.28, 841.89])
+      const { width, height } = image
+      
+      // Calculate scaling to fit the image
+      const pageWidth = page.getWidth()
+      const pageHeight = page.getHeight()
+      
+      let scaledWidth = pageWidth - 40
+      let scaledHeight = (height * scaledWidth) / width
+      
+      if (scaledHeight > pageHeight - 40) {
+        scaledHeight = pageHeight - 40
+        scaledWidth = (width * scaledHeight) / height
+      }
+      
+      // Center the image
+      const x = (pageWidth - scaledWidth) / 2
+      const y = (pageHeight - scaledHeight) / 2
+
+      // Draw the image
+      page.drawImage(image, {
+        x,
+        y,
+        width: scaledWidth,
+        height: scaledHeight
+      })
+
+      // Create PDF file
+      const pdfBytes = await pdfDoc.save()
+      return new File([pdfBytes], `${file.name}.pdf`, { type: 'application/pdf' })
+    },
+    convertImageToPng(imageData) {
+      return new Promise((resolve) => {
+        const tempImage = new Image()
+        tempImage.src = imageData
+        tempImage.onload = () => {
+          const canvas = document.createElement('canvas')
+          canvas.width = tempImage.width
+          canvas.height = tempImage.height
+          const ctx = canvas.getContext('2d')
+          ctx.drawImage(tempImage, 0, 0)
+          resolve(canvas.toDataURL('image/png').split(',')[1])
+        }
+      })
     }
   }
 }
@@ -69,12 +142,12 @@ export default {
 #drop-area {
   border: 2px dashed #ccc;
   border-radius: 8px;
-  padding: 40px;
+  padding: 20px;
   text-align: center;
   background: #f8f9fa;
   cursor: pointer;
   transition: all 0.3s ease;
-  min-height: 200px;
+  min-height: 120px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -89,11 +162,11 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 8px;
 }
 
 .upload-icon {
-  font-size: 48px;
+  font-size: 32px;
   color: #666;
 }
 
