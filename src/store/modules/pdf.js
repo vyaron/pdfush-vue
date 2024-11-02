@@ -60,32 +60,49 @@ export default {
           delete state.pdfDataStore[pdfName]
         }
       },
-      REORDER_PAGES(state, { fromPage, toPage }) {
-        console.log('REORDER_PAGES mutation called with:', { fromPage, toPage })
-        console.log('Current pageOrder:', state.pageOrder)
+      REORDER_PAGES(state, { fromPage, toPage, fromPdf, toPdf }) {
+        console.log('REORDER_PAGES:', { fromPage, toPage, fromPdf, toPdf })
         
         const pages = [...state.pageOrder]
-        const fromIndex = pages.findIndex(p => p.pageNum === fromPage)
-        const toIndex = pages.findIndex(p => p.pageNum === toPage)
         
-        console.log('Found indices:', { fromIndex, toIndex })
+        // Find the source page
+        const fromIndex = pages.findIndex(
+          p => p.pageNum === fromPage && p.pdfName === fromPdf
+        )
         
-        if (fromIndex === -1 || toIndex === -1) {
-          console.warn('Could not find pages:', { fromPage, toPage })
+        if (fromIndex === -1) {
+          console.warn('Could not find source page:', { fromPage, fromPdf })
           return
         }
         
+        // Move the page
         const [movedPage] = pages.splice(fromIndex, 1)
-        pages.splice(toIndex, 0, movedPage)
+        movedPage.pdfName = toPdf
         
-        console.log('After splice:', pages)
+        // If dropping at the end of a document
+        if (toPage > pages.filter(p => p.pdfName === toPdf).length) {
+          // Add to the end of target document's pages
+          const lastTargetIndex = pages.findLastIndex(p => p.pdfName === toPdf)
+          pages.splice(lastTargetIndex + 1, 0, movedPage)
+        } else {
+          // Insert at specific position
+          const toIndex = pages.findIndex(
+            p => p.pageNum === toPage && p.pdfName === toPdf
+          )
+          pages.splice(toIndex, 0, movedPage)
+        }
         
-        // Update page numbers
-        pages.forEach((page, index) => {
-          page.pageNum = index + 1
-        })
+        // Update page numbers for both PDFs
+        const updatePageNumbers = (pdfName) => {
+          const pdfPages = pages.filter(p => p.pdfName === pdfName)
+          pdfPages.forEach((page, index) => {
+            page.pageNum = index + 1
+          })
+        }
         
-        console.log('After updating page numbers:', pages)
+        updatePageNumbers(fromPdf)
+        updatePageNumbers(toPdf)
+        
         state.pageOrder = [...pages]
       },
       RENAME_PDF(state, { oldName, newName }) {

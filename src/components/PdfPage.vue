@@ -14,23 +14,19 @@
     <div class="canvas-wrapper">
       <canvas ref="canvas" class="page-preview"></canvas>
     </div>
-    <div v-if="isDropTarget && !isDragging" class="drop-line"></div>
+    <div 
+      v-if="isDropTarget && !isDragging" 
+      class="drop-line"
+      :class="{ 'drop-line-right': isLastPage }"
+    ></div>
   </div>
 </template>
 
 <script>
 export default {
   props: {
-    pdfName: {
-      type: String,
-      required: true
-    },
-    pageNum: {
-      type: Number,
-      required: true
-    },
-    originalPageNum: {
-      type: Number,
+    pageInfo: {
+      type: Object,
       required: true
     }
   },
@@ -39,7 +35,7 @@ export default {
     return {
       isDragging: false,
       isDropTarget: false,
-      scale: 0.3,
+      scale: 0.2,
       isRendered: false
     }
   },
@@ -47,6 +43,11 @@ export default {
   computed: {
     pdfDataStore() {
       return this.$store.state.pdf.pdfDataStore
+    },
+    isLastPage() {
+      const pages = this.$store.state.pdf.pageOrder
+      const pdfPages = pages.filter(p => p.pdfName === this.pageInfo.pdfName)
+      return this.pageInfo.pageNum === pdfPages.length
     }
   },
 
@@ -55,12 +56,12 @@ export default {
       if (this.isRendered) return
 
       try {
-        const pdfData = this.pdfDataStore[this.pdfName]
+        const pdfData = this.pdfDataStore[this.pageInfo.originalPdfName]
         if (!pdfData) return
 
         const arrayBuffer = await pdfData.arrayBuffer()
         const pdf = await pdfjsLib.getDocument(arrayBuffer).promise
-        const page = await pdf.getPage(this.originalPageNum)
+        const page = await pdf.getPage(this.pageInfo.originalPageNum)
         
         const viewport = page.getViewport({ scale: this.scale })
         const canvas = this.$refs.canvas
@@ -84,7 +85,10 @@ export default {
     onDragStart(e) {
       this.isDragging = true
       document.body.classList.add('dragging-active')
-      e.dataTransfer.setData('text/plain', this.pageNum.toString())
+      e.dataTransfer.setData('text/plain', JSON.stringify({
+        pageNum: this.pageInfo.pageNum,
+        pdfName: this.pageInfo.pdfName
+      }))
     },
 
     onDragEnd() {
@@ -106,13 +110,20 @@ export default {
       e.preventDefault()
       this.isDropTarget = false
       
-      const fromPage = parseInt(e.dataTransfer.getData('text/plain'))
-      if (fromPage === this.pageNum) return
-      
-      this.$store.commit('pdf/REORDER_PAGES', {
-        fromPage,
-        toPage: this.pageNum
-      })
+      try {
+        const dragData = JSON.parse(e.dataTransfer.getData('text/plain'))
+        if (dragData.pageNum === this.pageInfo.pageNum && 
+            dragData.pdfName === this.pageInfo.pdfName) return
+        
+        this.$store.commit('pdf/REORDER_PAGES', {
+          fromPage: dragData.pageNum,
+          toPage: this.pageInfo.pageNum,
+          fromPdf: dragData.pdfName,
+          toPdf: this.pageInfo.pdfName
+        })
+      } catch (error) {
+        console.error('Drop error:', error)
+      }
     }
   },
 
@@ -136,12 +147,18 @@ export default {
   border: 1px solid #ddd;
   border-radius: 4px;
   overflow: hidden;
+  width: 120px;
+  height: 170px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .page-preview {
   display: block;
   max-width: 100%;
-  height: auto;
+  max-height: 100%;
+  object-fit: contain;
 }
 
 .drop-line {
@@ -152,6 +169,11 @@ export default {
   height: 100%;
   background-color: #2196f3;
   pointer-events: none;
+}
+
+.drop-line-right {
+  left: auto;
+  right: -5px;
 }
 
 .dragging {
