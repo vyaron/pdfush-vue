@@ -22,12 +22,21 @@
     <div>Combining PDFs...</div>
   </div>
 
+  <p>* You may drag & drop for docs reordering </p>
   <div id="preview-container">
-    <div class="pdf-previews">
+    <div 
+      class="pdf-previews"
+      @dragover.prevent
+      @drop.prevent="handleReorder"
+    >
       <PdfPreview
-        v-for="pdfName in Object.keys(pdfDataStore)"
+        v-for="pdfName in orderedDocs"
         :key="pdfName"
         :pdf-name="pdfName"
+        draggable="true"
+        @dragstart="dragStart($event, pdfName)"
+        @dragenter.prevent
+        @dragover.prevent
       />
     </div>
   </div>
@@ -36,7 +45,7 @@
     v-if="showFullPageModal"
   />
   <footer>
-    Multiple PDF Page-by-Page Preview with Drag and Drop
+    Your ultimate PDF manipulations tool
   </footer>
 </template>
 
@@ -58,20 +67,50 @@ export default {
   computed: {
     ...mapState('pdf', ['pdfDataStore']),
     ...mapState('ui', ['modalVisible', 'showFullPageModal', 'isLoading']),
+    ...mapGetters('pdf', ['orderedDocs']),
     hasPdfs() {
-      return Object.keys(this.pdfDataStore).length > 0
+      return this.orderedDocs.length > 0
+    }
+  },
+  data() {
+    return {
+      draggedDoc: null
     }
   },
   methods: {
-    ...mapActions('pdf', ['combinePdfs']),
-   
+    ...mapActions('pdf', ['combinePdfs', 'updateDocOrder']),
+    
     async handleCombine() {
       try {
-        this.combinePdfs()
+        await this.combinePdfs()
       } catch (error) {
-        // You might want to show an error message to the user
-        console.error('Failed to combine PDFs:', error)
+        console.error('Error combining PDFs:', error)
+        // Optionally add error handling UI feedback here
       }
+    },
+
+    dragStart(event, pdfName) {
+      this.draggedDoc = pdfName
+      event.dataTransfer.effectAllowed = 'move'
+    },
+
+    handleReorder(event) {
+      event.preventDefault()
+      const dropTarget = event.target.closest('.pdf-preview')
+      if (!dropTarget || !this.draggedDoc) return
+
+      const targetDoc = dropTarget.getAttribute('data-pdf-name')
+      if (targetDoc === this.draggedDoc) return
+
+      const newOrder = [...this.orderedDocs]
+      const draggedIdx = newOrder.indexOf(this.draggedDoc)
+      const targetIdx = newOrder.indexOf(targetDoc)
+
+      newOrder.splice(draggedIdx, 1)
+      newOrder.splice(targetIdx, 0, this.draggedDoc)
+      
+      this.updateDocOrder(newOrder)
+      this.draggedDoc = null
     }
   }
 }
@@ -141,5 +180,26 @@ export default {
 #combineButton:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.pdf-previews {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding: 20px;
+  min-height: 200px;
+}
+
+.pdf-preview {
+  cursor: move;
+  transition: transform 0.2s ease;
+}
+
+.pdf-preview:hover {
+  transform: scale(1.02);
+}
+
+.pdf-preview.dragging {
+  opacity: 0.5;
 }
 </style>

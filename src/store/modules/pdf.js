@@ -5,15 +5,31 @@ export default {
   state: {
     pdfDataStore: {},
     pageOrder: [],
+    docOrder: [],
     previewPage: null
   },
   getters: {
-    hasPdfs: state => Object.keys(state.pdfDataStore).length > 0
+    hasPdfs: state => Object.keys(state.pdfDataStore).length > 0,
+    orderedDocs: state => state.docOrder
   },
   mutations: {
+    SET_DOC_ORDER(state, order) {
+      state.docOrder = order
+    },
+    ADD_TO_DOC_ORDER(state, name) {
+      if (!state.docOrder.includes(name)) {
+        state.docOrder.push(name)
+      }
+    },
+    REMOVE_FROM_DOC_ORDER(state, name) {
+      state.docOrder = state.docOrder.filter(doc => doc !== name)
+    },
     ADD_PDF(state, { name, data }) {
       console.log('Adding PDF to store:', name)
       state.pdfDataStore[name] = data
+      if (!state.docOrder.includes(name)) {
+        state.docOrder.push(name)
+      }
     },
     ADD_PAGES(state, pages) {
       console.log('Adding pages:', pages)
@@ -35,6 +51,10 @@ export default {
         pdfName: page.pdfName === oldName ? newName : page.pdfName,
         originalPdfName: page.originalPdfName === oldName ? newName : page.originalPdfName
       }))
+
+      state.docOrder = state.docOrder.map(name => 
+        name === oldName ? newName : name
+      )
     },
     UPDATE_PAGE_ORDER(state, newOrder) {
       state.pageOrder = [...newOrder]
@@ -276,6 +296,9 @@ export default {
         commit('ui/SET_LOADING', false, { root: true })
         throw error
       }
+    },
+    updateDocOrder({ commit }, newOrder) {
+      commit('SET_DOC_ORDER', newOrder)
     }
   }
 }

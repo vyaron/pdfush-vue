@@ -1,6 +1,10 @@
 <!-- components/PdfPreview.vue -->
 <template>
-  <div class="pdf-preview">
+  <div 
+    class="pdf-preview" 
+    :data-pdf-name="pdfName"
+    :class="{ dragging: isDragging }"
+  >
     <details class="pdf-section" open>
       <summary class="pdf-summary">
         <div class="pdf-title-container">
@@ -67,7 +71,8 @@ export default {
       isDraggingActive: false,
       isEditing: false,
       editedName: '',
-      scrollInterval: null
+      scrollInterval: null,
+      isDragging: false
     }
   },
 
@@ -75,6 +80,8 @@ export default {
     ...mapState('pdf', ['pageOrder']),
     
     pdfPages() {
+      if (!this.pageOrder) return []
+      
       return this.pageOrder
         .filter(page => page.pdfName === this.pdfName)
         .sort((a, b) => a.pageNum - b.pageNum)
@@ -140,6 +147,20 @@ export default {
       }
 
       const newName = this.editedName.trim() + '.pdf'
+      
+      // Check if name already exists in pdfDataStore
+      const nameExists = Object.keys(this.$store.state.pdf.pdfDataStore)
+        .some(name => 
+          name.toLowerCase() === newName.toLowerCase() && 
+          name !== this.pdfName
+        )
+
+      if (nameExists) {
+        alert('A document with this name already exists')
+        this.cancelEditing()
+        return
+      }
+
       if (newName !== this.pdfName) {
         this.$store.commit('pdf/UPDATE_DOC_NAME', {
           oldName: this.pdfName,
